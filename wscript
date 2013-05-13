@@ -14,5 +14,5 @@ def configure(conf):
   conf.check_cfg(package='libpcre', args='--cflags --libs', uselib_store='pcre')
 
 def build(bld):
-  bld.program(source='divvy.c', target='divvy', use='mpi pcre')
+  bld.program(source=['divvy.c','timing.c'], target='divvy', use='mpi pcre')
 
