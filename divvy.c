@@ -10,6 +10,7 @@
 #include <math.h>
 #include <mpi.h>
 #include <pcre.h>
+#include "divvy.h"
 
 #define MAX_PATH_LENGTH  (4096)
 #define MAX_PARTIAL_SIZE (1024)
@@ -197,6 +198,7 @@ void write_chunks(char *filename, struct buffer *buf)
 
 int main(int argc, char *argv[])
 {
+   double         clock;
    struct buffer  buf;
    char          *pattern = NULL;
    char          *infile  = NULL;
@@ -207,9 +209,16 @@ int main(int argc, char *argv[])
 
    MPI_Init(&argc, &argv);
 
+   tic(&clock);
+
    read_fastq(infile, &buf);
+   toc(&clock, "Read input");
+
    transfer_partials(pattern, &buf);
+   toc(&clock, "Transfer partials");
+
    write_chunks(infile, &buf);
+   toc(&clock, "Write chunks");
 
    MPI_Finalize();
    free(buf.data);
