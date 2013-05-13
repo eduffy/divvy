@@ -127,9 +127,9 @@ void read_fastq(char *filename, struct buffer *buf)
    chunksize = (long) ceil((double)filesize / size);
 
    if(rank == 0) {
-      printf("File size:  %12ld bytes\n", filesize);
-      printf("Chunk size: %12ld bytes\n", chunksize);
-      printf("Num chunks: %12d\n", size);
+      printf("File size:     %12ld bytes\n", filesize);
+      printf("Chunk size:    %12ld bytes\n", chunksize);
+      printf("Num chunks:    %12d\n", size);
    }
 
    rescode = MPI_File_open(MPI_COMM_WORLD,
@@ -212,13 +212,13 @@ int main(int argc, char *argv[])
    tic(&clock);
 
    read_fastq(infile, &buf);
-   toc(&clock, "Read input");
+   toc(&clock, "Read input:");
 
    transfer_partials(pattern, &buf);
-   toc(&clock, "Transfer partials");
+   toc(&clock, "Transfer:");
 
    write_chunks(infile, &buf);
-   toc(&clock, "Write chunks");
+   toc(&clock, "Write chunks:");
 
    MPI_Finalize();
    free(buf.data);

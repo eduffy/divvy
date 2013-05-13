@@ -17,7 +17,7 @@ void toc(double *clock, const char *message)
 
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
    if(rank == 0) {
-      printf("%-10s: %12.2lf sec\n", message, MPI_Wtime() - *clock);
+      printf("%-13s %12.2lf sec\n", message, MPI_Wtime() - *clock);
    }
    *clock = MPI_Wtime();
 }
