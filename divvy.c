@@ -40,12 +40,17 @@ void advance_record(const char *pattern, struct buffer *buf)
    pcre       *regex = NULL;
    const char *err;
    int         erroffset;
+   int         rank;
    int         retcode;
    int         matches[3] = { 0 };
 
+   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
    regex = pcre_compile(pattern, PCRE_MULTILINE, &err, &erroffset, NULL);
-   if(regex == NULL) { 
-      /* FIXME: Add appropriate compilation error message */
+   if(regex == NULL) {
+      fprintf(stderr, "An error occured while compiling regular expression, "
+                      "%s at offset %d.\n", err, erroffset);
+      MPI_Abort(MPI_COMM_WORLD, 1);
    }
    
    retcode = pcre_exec(regex,
@@ -54,9 +59,10 @@ void advance_record(const char *pattern, struct buffer *buf)
                        buf->end - buf->start,
                        0, 0, matches, 3);
    if(retcode < 0) {
-      /* FIXME: Add appropriate match failure error message */
-      switch(PCRE_ERROR_NOMATCH) {
-      }
+      fprintf(stderr, "No record header found in chunk %d "
+                      "matching regular expression %s.\n", 
+                      rank, pattern);
+      MPI_Abort(MPI_COMM_WORLD, 1);
    }
    buf->start += matches[0];
 }
