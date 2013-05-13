@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -18,7 +19,7 @@ struct {
   char *name;
   char *pattern;
 } PREDEFINES[] = {
-   "--fastq", "^@.*\\\n.*\\\n\\\+",
+   "--fastq", "^@.*\\n.*\\n\\+",
    NULL,      NULL
 };
 
@@ -34,16 +35,30 @@ long getfilesize(const char *fn)
   return buf.st_size;
 }
 
-void locate_next_sequence(struct buffer *buf)
+void advance_record(const char *pattern, struct buffer *buf)
 {
-   char *p;
-   while(buf->start[0] != '@') ++(buf->start);
-   p = buf->start + 1;
-   while(p[0] != '\n' || p[1] != '+') {
-      if(p[0] == '@')
-         buf->start = p;
-      ++p;
+   pcre       *regex = NULL;
+   const char *err;
+   int         erroffset;
+   int         retcode;
+   int         matches[3] = { 0 };
+
+   regex = pcre_compile(pattern, PCRE_MULTILINE, &err, &erroffset, NULL);
+   if(regex == NULL) { 
+      /* FIXME: Add appropriate compilation error message */
    }
+   
+   retcode = pcre_exec(regex,
+                       NULL,
+                       buf->start,
+                       buf->end - buf->start,
+                       0, 0, matches, 3);
+   if(retcode < 0) {
+      /* FIXME: Add appropriate match failure error message */
+      switch(PCRE_ERROR_NOMATCH) {
+      }
+   }
+   buf->start += matches[0];
 }
 
 void read_fastq(char *filename, struct buffer *buf)
@@ -91,14 +106,14 @@ void read_fastq(char *filename, struct buffer *buf)
    buf->end   = buf->data + count;
 }
 
-void transfer_partials(struct buffer *buf)
+void transfer_partials(const char *pattern, struct buffer *buf)
 {
    int size, rank;
    MPI_Comm_size(MPI_COMM_WORLD, &size);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    if(rank > 0) {
-      locate_next_sequence(buf);
+      advance_record(pattern, buf);
       MPI_Send(buf->data,
                buf->start - buf->data,
                MPI_CHAR,
@@ -136,9 +151,10 @@ int main(int argc, char *argv[])
 
    MPI_Init(&argc, &argv);
 
-   read_fastq(argv[1], &buf);
-   transfer_partials(&buf);
-   write_chunks(argv[1], &buf);
+   /* FIXME: Fix the command-line argument handling */
+   read_fastq(argv[2], &buf);
+   transfer_partials(argv[1], &buf);
+   write_chunks(argv[2], &buf);
 
    MPI_Finalize();
    free(buf.data);
