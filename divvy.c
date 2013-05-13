@@ -8,10 +8,19 @@
 #include <unistd.h>
 #include <math.h>
 #include <mpi.h>
+#include <pcre.h>
 
 #define MAX_PATH_LENGTH  (4096)
 #define MAX_PARTIAL_SIZE (1024)
 #define TAG_PARTIAL      (0)
+
+struct {
+  char *name;
+  char *pattern;
+} PREDEFINES[] = {
+   "--fastq", "^@.*\\\n.*\\\n\\\+",
+   NULL,      NULL
+};
 
 struct buffer {
   char *data, *start, *end;
