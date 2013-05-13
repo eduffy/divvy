@@ -15,10 +15,17 @@
 #define MAX_PARTIAL_SIZE (1024)
 #define TAG_PARTIAL      (0)
 
-struct {
+#define streq(X,Y)      (strcmp((X),(Y))==0)
+#define startswith(X,P) (strncmp((X), (P), strlen(P)) == 0)
+
+
+typedef struct {
   char *name;
   char *pattern;
-} PREDEFINES[] = {
+} predefine_t;
+
+predefine_t PREDEFINE_LIST[] =
+{
    "--fastq", "^@.*\\n.*\\n\\+",
    NULL,      NULL
 };
@@ -27,14 +34,50 @@ struct buffer {
   char *data, *start, *end;
 };
 
-long getfilesize(const char *fn)
+int file_exists(const char *path)
+{
+   return access(path, R_OK) == 0;
+}
+
+long getfilesize(const char *path)
 {
   struct stat buf;
-  if(stat(fn, &buf) == -1)
+  if(stat(path, &buf) == -1)
     return -1;
   return buf.st_size;
 }
 
+int parse_commandline(int argc, char **argv,
+                      char **pattern,
+                      char **infile)
+{
+   while(--argc) {
+      ++argv;
+      if(streq(argv[0], "-r")) {
+         *pattern = strdup(argv[1]);
+         --argc;
+      }
+      else if(startswith(argv[0], "-r")) {
+         *pattern = strdup(argv[0] + 2);
+      }
+      else if(startswith(argv[0], "--regex=")) {
+         *pattern = strdup(argv[0] + 8);
+      }
+      else if(startswith(argv[0], "--")) {
+         predefine_t *p = &PREDEFINE_LIST[0];
+         for(; p->name != NULL; ++p) {
+            if(streq(p->name, argv[0])) {
+               *pattern = strdup(p->pattern);
+            }
+         }
+      }
+      else {
+         if(file_exists(argv[0])) {
+            *infile = strdup(argv[0]);
+         }
+      }
+   }
+}
 void advance_record(const char *pattern, struct buffer *buf)
 {
    pcre       *regex = NULL;
@@ -119,7 +162,8 @@ void transfer_partials(const char *pattern, struct buffer *buf)
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    if(rank > 0) {
-      advance_record(pattern, buf);
+      if(pattern != NULL)
+         advance_record(pattern, buf);
       MPI_Send(buf->data,
                buf->start - buf->data,
                MPI_CHAR,
@@ -153,16 +197,23 @@ void write_chunks(char *filename, struct buffer *buf)
 
 int main(int argc, char *argv[])
 {
-   struct buffer buf;
+   struct buffer  buf;
+   char          *pattern = NULL;
+   char          *infile  = NULL;
+
+   parse_commandline(argc, argv, &pattern, &infile);
+   if(infile == NULL)
+      return EXIT_FAILURE;
 
    MPI_Init(&argc, &argv);
 
-   /* FIXME: Fix the command-line argument handling */
-   read_fastq(argv[2], &buf);
-   transfer_partials(argv[1], &buf);
-   write_chunks(argv[2], &buf);
+   read_fastq(infile, &buf);
+   transfer_partials(pattern, &buf);
+   write_chunks(infile, &buf);
 
    MPI_Finalize();
    free(buf.data);
+   free(pattern);
+   free(infile);
    return EXIT_SUCCESS;
 }
