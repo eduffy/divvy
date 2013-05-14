@@ -117,7 +117,7 @@ void advance_record(const char *pattern, struct buffer *buf)
    pcre_free(regex);
 }
 
-void read_fastq(char *filename, struct buffer *buf)
+void load_file(char *filename, struct buffer *buf)
 {
    MPI_File fh;
    MPI_Status status;
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 
    tic(&clock);
 
-   read_fastq(infile, &buf);
+   load_file(infile, &buf);
    toc(&clock, "Read input:");
 
    transfer_partials(pattern, &buf);
