@@ -109,6 +109,7 @@ void advance_record(const char *pattern, struct buffer *buf)
       MPI_Abort(MPI_COMM_WORLD, 1);
    }
    buf->start += matches[0];
+   pcre_free(regex);
 }
 
 void read_fastq(char *filename, struct buffer *buf)
@@ -127,9 +128,9 @@ void read_fastq(char *filename, struct buffer *buf)
    chunksize = (long) ceil((double)filesize / size);
 
    if(rank == 0) {
-      printf("File size:     %12ld bytes\n", filesize);
-      printf("Chunk size:    %12ld bytes\n", chunksize);
-      printf("Num chunks:    %12d\n", size);
+      printf("File size:    %12ld bytes\n", filesize);
+      printf("Chunk size:   %12ld bytes\n", chunksize);
+      printf("Num chunks:   %12d\n", size);
    }
 
    rescode = MPI_File_open(MPI_COMM_WORLD,
