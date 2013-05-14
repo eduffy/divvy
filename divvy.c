@@ -103,9 +103,14 @@ void advance_record(const char *pattern, struct buffer *buf)
                        buf->end - buf->start,
                        0, 0, matches, 3);
    if(retcode < 0) {
-      fprintf(stderr, "No record header found in chunk %d "
-                      "matching regular expression %s.\n", 
-                      rank, pattern);
+      if(retcode == PCRE_ERROR_NOMATCH) {
+         fprintf(stderr, "No record header found in chunk %d "
+                         "matching regular expression %s.\n", 
+                         rank, pattern);
+      }
+      else {
+         fprintf(stderr, "An unknown error occured in chunk %d.\n" rank);
+      }
       MPI_Abort(MPI_COMM_WORLD, 1);
    }
    buf->start += matches[0];
