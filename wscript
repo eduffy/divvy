@@ -15,4 +15,5 @@ def configure(conf):
 
 def build(bld):
   bld.program(source=['divvy.c','timing.c'], target='divvy', use='mpi pcre')
+  bld.program(source=['concat.c','timing.c'], target='concat', use='mpi')
 
