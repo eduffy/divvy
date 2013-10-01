@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,13 +55,20 @@ long getfilesize(const char *path)
 
 int parse_commandline(int argc, char **argv,
                       char **pattern,
-                      char **infile)
+                      char **infile,
+                      char **outdir)
 {
    while(--argc) {
       ++argv;
       if(streq(argv[0], "-r")) {
          *pattern = strdup(argv[1]);
          --argc;
+      }
+      else if(streq(argv[0], "-o")) {
+         free(*outdir);
+         *outdir = strdup(argv[1]);
+         --argc;
+      ++argv;
       }
       else if(startswith(argv[0], "-r")) {
          *pattern = strdup(argv[0] + 2);
@@ -113,7 +121,7 @@ void advance_record(const char *pattern, struct buffer *buf)
                          rank, pattern);
       }
       else {
-         fprintf(stderr, "An unknown error occured in chunk %d.\n" rank);
+         fprintf(stderr, "An unknown error occured in chunk %d.\n", rank);
       }
       MPI_Abort(MPI_COMM_WORLD, 1);
    }
@@ -191,16 +199,19 @@ void transfer_partials(const char *pattern, struct buffer *buf)
    }
 }
 
-void write_chunks(char *filename, struct buffer *buf)
+void write_chunks(char *filename, char *outdir, struct buffer *buf)
 {
    int rank;
    char outfilename[MAX_PATH_LENGTH];
+   char *filebase;
    FILE *fh;
 
    /* FIXME: use MPI_File */
 
+   filebase = strdup(filename);
+   filebase = basename(filebase);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-   sprintf(outfilename, "%s.%03d", filename, rank);
+   sprintf(outfilename, "%s/%s.%03d", outdir, filebase, rank);
    fh = fopen(outfilename, "w");
    fwrite(buf->start, 1, buf->end - buf->start, fh);
    fclose(fh);
@@ -212,8 +223,9 @@ int main(int argc, char *argv[])
    struct buffer  buf;
    char          *pattern = NULL;
    char          *infile  = NULL;
+   char          *outdir = strdup(".");
 
-   parse_commandline(argc, argv, &pattern, &infile);
+   parse_commandline(argc, argv, &pattern, &infile, &outdir);
    if(infile == NULL)
       return EXIT_FAILURE;
 
@@ -227,7 +239,7 @@ int main(int argc, char *argv[])
    transfer_partials(pattern, &buf);
    toc(&clock, "Transfer:");
 
-   write_chunks(infile, &buf);
+   write_chunks(infile, outdir, &buf);
    toc(&clock, "Write chunks:");
 
    MPI_Finalize();
