@@ -63,12 +63,13 @@ int parse_commandline(int argc, char **argv,
       if(streq(argv[0], "-r")) {
          *pattern = strdup(argv[1]);
          --argc;
+         ++argv;
       }
       else if(streq(argv[0], "-o")) {
          free(*outdir);
          *outdir = strdup(argv[1]);
          --argc;
-      ++argv;
+         ++argv;
       }
       else if(startswith(argv[0], "-r")) {
          *pattern = strdup(argv[0] + 2);
